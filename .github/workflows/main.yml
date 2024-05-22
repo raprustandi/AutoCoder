@@ -1,4 +1,4 @@
-name: Access Issue Information
+name: Generate Code With Chat-GPT
 
 on:
   issues:
@@ -12,16 +12,29 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Print Issue Information
+      - name: Set permissions to script.sh
+        run: chmod +x /scripts/script.sh
+
+      - name: Run the script
         env:
+          REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          ISSUE_ASSIGNEES: ${{ join(github.event.issue.assignees.*.login, ', ') }}
-          ISSUE_LABEL: ${{ join(github.event.issue.labels.*.name, ', ') }}
-        run: |
-          echo "Issue Number: ${ISSUE_NUMBER}"
-          echo "Issue Title: ${ISSUE_TITLE}"
-          echo "Issue Body: ${ISSUE_BODY}"
-          echo "Issue Assignees: ${ISSUE_ASSIGNEES}"
-          echo "Issue Label: ${ISSUE_LABEL}"
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: ./scripts/script.sh ${secrets.GITHUB_TOKEN}, ${REPOSITORY}, ${ISSUE_NUMBER}, ${OPENAI_API_KEY} > ${ISSUE_NUMBER}-response.txt
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: autocoder-artifact
+          path: |
+            *-response.txt
+          if-no-files-found: error
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: autocoder-artifact
+          path: artifact
+
+      - name: List files in the artifact
+        run: ls /home/runner/artifact/autocoder-artifact
